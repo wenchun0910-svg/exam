@@ -57,7 +57,7 @@
       </div>
       
       <!-- 時程清單容器 -->
-      <div id="schedule-container" class="flex-1 overflow-y-auto p-6 space-y-4 min-h-[50vh] md:min-h-0 pb-12">
+      <div id="schedule-container" class="flex-1 overflow-y-auto p-6 space-y-2 min-h-[50vh] md:min-h-0 pb-12">
         <!-- 內容由 JavaScript 動態生成 -->
       </div>
     </div>
@@ -218,21 +218,23 @@
       container.innerHTML = schedule.map(exam => {
         const isActive = exam.id === activeExamId;
         return `
-          <div class="p-6 transition-all duration-500 relative bg-white border ${isActive ? 'border-[#9D2933] shadow-[0_4px_12px_rgba(157,41,51,0.1)]' : 'border-[#E5E5E5] hover:border-slate-300'}">
+          <div class="p-5 transition-all duration-500 relative bg-white border ${isActive ? 'border-[#9D2933] shadow-[0_4px_12px_rgba(157,41,51,0.1)]' : 'border-[#E5E5E5] hover:border-slate-300'}">
             ${isActive ? `<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#9D2933]"></div>` : ''}
             
-            <div class="flex justify-between items-center mb-6 ml-2">
-              <span class="text-2xl md:text-3xl font-serif-tc font-bold tracking-widest ${isActive ? 'text-[#9D2933]' : 'text-slate-800'}">
-                ${exam.subject}
-              </span>
-              ${isActive ? `<span class="bg-[#9D2933] text-white text-xs font-bold px-3 py-1 tracking-[0.2em] shadow-sm flex items-center gap-1 animate-pulse"><i class="ph-fill ph-circle text-[8px]"></i> 進行中</span>` : ''}
-            </div>
-            
-            <div class="flex items-center gap-5 font-medium ml-2 ${isActive ? 'text-slate-800' : 'text-slate-500'}">
-              <i class="ph ${isActive ? 'ph-hourglass-high text-[#9D2933]' : 'ph-clock'} text-4xl opacity-80"></i>
-              <div class="flex flex-col border-l-2 ${isActive ? 'border-[#9D2933]/30' : 'border-slate-200'} pl-5 py-1 gap-3">
-                <span class="tracking-[0.1em] font-mono text-3xl md:text-4xl leading-none">${exam.startTime}</span>
-                <span class="tracking-[0.1em] font-mono text-3xl md:text-4xl leading-none">${exam.endTime}</span>
+            <div class="flex flex-col ml-2 gap-1">
+              <div class="flex justify-between items-center">
+                <span class="text-2xl md:text-3xl font-serif-tc font-bold tracking-widest leading-none ${isActive ? 'text-[#9D2933]' : 'text-slate-800'}">
+                  ${exam.subject}
+                </span>
+                ${isActive ? `<span class="bg-[#9D2933] text-white text-xs font-bold px-3 py-1 tracking-[0.2em] shadow-sm flex items-center gap-1 animate-pulse"><i class="ph-fill ph-circle text-[8px]"></i> 進行中</span>` : ''}
+              </div>
+              
+              <div class="flex items-center gap-5 font-medium ${isActive ? 'text-slate-800' : 'text-slate-500'}">
+                <i class="ph ${isActive ? 'ph-hourglass-high text-[#9D2933]' : 'ph-clock'} text-4xl opacity-80"></i>
+                <div class="flex flex-col border-l-2 ${isActive ? 'border-[#9D2933]/30' : 'border-slate-200'} pl-5 py-0.5 gap-2 mt-1">
+                  <span class="tracking-[0.1em] font-mono text-3xl md:text-4xl leading-none">${exam.startTime}</span>
+                  <span class="tracking-[0.1em] font-mono text-3xl md:text-4xl leading-none">${exam.endTime}</span>
+                </div>
               </div>
             </div>
           </div>
