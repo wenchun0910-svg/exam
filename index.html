@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>考試時程表 - 日式風格</title>
+  
+  <!-- 引入 Google Fonts: 思源宋體 (Serif) 與 思源黑體 (Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <!-- 引入 Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 引入 Phosphor Icons (圖示庫) -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    :root {
+      --color-washi: #F5F3EC; /* 和紙色 */
+      --color-ai: #1A2B4C;    /* 藍色 (Indigo) */
+      --color-matcha: #495B3F;/* 抹茶色 */
+      --color-kurenai: #9D2933;/* 紅色 (Crimson) */
+      --color-kin: #C49750;   /* 金色 */
+    }
+    body { 
+      font-family: 'Noto Sans TC', sans-serif; 
+      background-color: var(--color-washi);
+    }
+    .font-serif-tc { 
+      font-family: 'Noto Serif TC', serif; 
+    }
+    /* 自訂簡約滾動條 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    
+    /* 質感背景紋理 (極淡的紙質或網點感) */
+    .bg-texture {
+      background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased overflow-x-hidden selection:bg-[#C49750] selection:text-white">
+
+  <!-- 主容器 -->
+  <div class="flex flex-col-reverse md:flex-row min-h-screen bg-texture">
+    
+    <!-- 左側：考試時程區塊 -->
+    <div class="w-full md:w-1/3 lg:w-1/4 bg-[#FAFAFA] shadow-[4px_0_24px_rgba(0,0,0,0.05)] flex flex-col border-r border-[#E5E5E5] md:h-screen relative z-10">
+      
+      <!-- 左側標頭 (抹茶色) -->
+      <div class="bg-[#495B3F] text-[#F5F3EC] p-8 shadow-sm flex flex-col items-center justify-center gap-3 shrink-0 border-b-4 border-[#C49750]">
+        <i class="ph ph-scroll text-4xl opacity-80"></i>
+        <h2 class="text-3xl font-serif-tc font-bold tracking-[0.2em] ml-2">本日考程</h2>
+      </div>
+      
+      <!-- 時程清單容器 -->
+      <div id="schedule-container" class="flex-1 overflow-y-auto p-6 space-y-4 min-h-[50vh] md:min-h-0 pb-12">
+        <!-- 內容由 JavaScript 動態生成 -->
+      </div>
+    </div>
+
+    <!-- 右側：巨大時鐘區塊 (藍色 Indigo) -->
+    <div class="w-full md:w-2/3 lg:w-3/4 bg-[#1A2B4C] flex flex-col justify-center items-center relative min-h-[50vh] md:min-h-screen bg-texture">
+      
+      <!-- 設定按鈕 -->
+      <button 
+        onclick="openSettings()"
+        class="absolute top-4 right-4 md:top-8 md:right-8 p-3 text-[#F5F3EC] hover:text-[#C49750] border border-transparent hover:border-[#C49750] transition-colors duration-300 z-10 flex items-center justify-center"
+        title="設定考程"
+      >
+        <i class="ph ph-sliders-horizontal text-3xl"></i>
+      </button>
+
+      <!-- 巨大時鐘字體 -->
+      <div 
+        id="clock-display"
+        class="font-serif-tc font-bold tracking-[0.1em] tabular-nums text-center text-[#F5F3EC] drop-shadow-lg"
+        style="font-size: clamp(4.5rem, 15vw, 16rem); line-height: 1;"
+      >
+        --:--:--
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Gemini API 設定 ---
+    const apiKey = ""; // API Key 會由執行環境自動注入
+
+    // 具備指數退避重試的 Fetch 函式
+    async function fetchWithRetry(url, options, retries = 5) {
+      const delays = [1000, 2000, 4000, 8000, 16000];
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
+          return await response.json();
+        } catch (error) {
+          if (i === retries - 1) throw error;
+          await new Promise(res => setTimeout(res, delays[i]));
+        }
+      }
+    }
+
+    // --- 應用程式狀態 ---
+    let schedule = [
+      { id: '1', subject: '國文', startTime: '08:10', endTime: '09:30' },
+      { id: '2', subject: '英文', startTime: '09:50', endTime: '11:10' },
+      { id: '3', subject: '數學', startTime: '11:30', endTime: '12:50' },
+    ];
+    
+    let editingSchedule = [];
+    let activeExamId = null;
+
+    // --- 工具函式 ---
+    const formatTime = (date) => {
+      const h = String(date.getHours()).padStart(2, '0');
+      const m = String(date.getMinutes()).padStart(2, '0');
+      const s = String(date.getSeconds()).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    };
+
+    const isCurrentExam = (start, end, timeObj) => {
+      const currentMinutes = timeObj.getHours() * 60 + timeObj.getMinutes();
+      const [startH, startM] = start.split(':').map(Number);
+      const [endH, endM] = end.split(':').map(Number);
+      const startTotal = startH * 60 + startM;
+      const endTotal = endH * 60 + endM;
+      return currentMinutes >= startTotal && currentMinutes <= endTotal;
+    };
+
+    // --- 畫面渲染函式 ---
+    
+    // 渲染左側考試清單
+    function renderSchedule() {
+      const container = document.getElementById('schedule-container');
+      
+      if (schedule.length === 0) {
+        container.innerHTML = `
+          <div class="text-center text-slate-400 mt-16 flex flex-col items-center">
+            <i class="ph ph-wind text-5xl mb-4 opacity-50"></i>
+            <p class="font-serif-tc tracking-widest">尚無考程</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = schedule.map(exam => {
+        const isActive = exam.id === activeExamId;
+        return `
+          <div class="p-6 transition-all duration-500 relative bg-white border ${isActive ? 'border-[#9D2933] shadow-[0_4px_12px_rgba(157,41,51,0.1)]' : 'border-[#E5E5E5] hover:border-slate-300'}">
+            ${isActive ? `<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#9D2933]"></div>` : ''}
+            
+            <div class="flex justify-between items-center mb-4 ml-2">
+              <span class="text-2xl font-serif-tc font-bold tracking-widest ${isActive ? 'text-[#9D2933]' : 'text-slate-800'}">
+                ${exam.subject}
+              </span>
+              ${isActive ? `<span class="bg-[#9D2933] text-white text-xs font-bold px-3 py-1 tracking-[0.2em] shadow-sm flex items-center gap-1 animate-pulse"><i class="ph-fill ph-circle text-[8px]"></i> 進行中</span>` : ''}
+            </div>
+            
+            <div class="text-lg flex items-center gap-3 font-medium ml-2 ${isActive ? 'text-slate-800' : 'text-slate-500'}">
+              <i class="ph ${isActive ? 'ph-hourglass-high text-[#9D2933]' : 'ph-clock'} text-xl"></i>
+              <span class="tracking-widest font-mono text-base pt-0.5">${exam.startTime} <span class="mx-1 font-sans text-slate-300">|</span> ${exam.endTime}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 渲染設定對話框內的編輯清單
+    function renderEditingSchedule() {
+      const listContainer = document.getElementById('editing-list');
+      
+      if (editingSchedule.length === 0) {
+        listContainer.innerHTML = `<p class="text-center text-slate-400 py-6 tracking-widest font-serif-tc">無項目</p>`;
+        return;
+      }
+
+      listContainer.innerHTML = editingSchedule.map(item => `
+        <div class="flex justify-between items-center bg-white p-4 border border-[#E5E5E5] transition hover:border-slate-300">
+          <div class="flex items-center gap-4 flex-wrap">
+            <span class="text-lg font-serif-tc font-bold w-full md:w-24 text-slate-800 tracking-widest">${item.subject}</span>
+            <span class="text-slate-600 px-3 py-1 font-mono text-sm tracking-widest flex items-center border-l-2 border-[#C49750]/50">
+              ${item.startTime} - ${item.endTime}
+            </span>
+          </div>
+          <button 
+            onclick="removeEditingItem('${item.id}')"
+            class="text-slate-400 hover:text-[#9D2933] p-2 transition-colors shrink-0"
+            title="削除"
+          >
+            <i class="ph ph-trash text-xl"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // 更新時鐘與狀態
+    function updateClock() {
+      const now = new Date();
+      
+      // 更新大時鐘文字
+      document.getElementById('clock-display').textContent = formatTime(now);
+
+      // 檢查目前進行中的考試
+      let newActiveId = null;
+      for (const exam of schedule) {
+        if (isCurrentExam(exam.startTime, exam.endTime, now)) {
+          newActiveId = exam.id;
+          break;
+        }
+      }
+
+      // 只有當「考試中」的科目改變時，才重新渲染左側清單，避免畫面閃爍
+      if (newActiveId !== activeExamId) {
+        activeExamId = newActiveId;
+        renderSchedule();
+      }
+    }
+
+    // --- AI 互動邏輯 (Gemini API) ---
+
+    // AI 智能排程
+    async function generateScheduleWithAI() {
+      const promptInput = document.getElementById('ai-prompt');
+      const loadingText = document.getElementById('ai-loading-text');
+      const btn = document.getElementById('btn-ai-schedule');
+      
+      if (!promptInput.value.trim()) {
+        alert('請輸入您的排程需求，例如：幫我排一個早上8點開始的考試，考四科。');
+        return;
+      }
+
+      loadingText.classList.remove('hidden');
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const payload = {
+          contents: [{ parts: [{ text: `請根據使用者的需求，生成一個合理的考試時程表。使用者需求：「${promptInput.value}」。考試間的休息時間請自行抓取（通常10-20分鐘）。` }] }],
+          systemInstruction: { parts: [{ text: "你是一個專業的台灣學校排考表助手。請嚴格根據 JSON Schema 回傳考試時程陣列。" }] },
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  subject: { type: "STRING", description: "科目名稱，例如：國文" },
+                  startTime: { type: "STRING", description: "開始時間，24小時制，格式為 HH:MM" },
+                  endTime: { type: "STRING", description: "結束時間，24小時制，格式為 HH:MM" }
+                },
+                required: ["subject", "startTime", "endTime"]
+              }
+            }
+          }
+        };
+
+        const data = await fetchWithRetry(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textResponse) {
+          const aiSchedule = JSON.parse(textResponse);
+          
+          // 將 AI 生成的資料加上 ID
+          const newItems = aiSchedule.map(item => ({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            subject: item.subject,
+            startTime: item.startTime,
+            endTime: item.endTime
+          }));
+
+          // 替換現有的編輯清單
+          editingSchedule = newItems.sort((a, b) => a.startTime.localeCompare(b.startTime));
+          renderEditingSchedule();
+          promptInput.value = ''; // 清空輸入框
+        }
+      } catch (error) {
+        console.error("AI 排程失敗:", error);
+        alert("抱歉，神明暫時無法回應您的祈求，請稍後再試。");
+      } finally {
+        loadingText.classList.add('hidden');
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    // --- 互動邏輯 ---
+
+    function openSettings() {
+      editingSchedule = JSON.parse(JSON.stringify(schedule)); 
+      const modal = document.getElementById('settings-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      renderEditingSchedule();
+    }
+
+    function closeSettings() {
+      const modal = document.getElementById('settings-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      
+      document.getElementById('new-subject').value = '';
+      document.getElementById('new-start').value = '';
+      document.getElementById('new-end').value = '';
+    }
+
+    function saveSettings() {
+      schedule = [...editingSchedule];
+      activeExamId = null; 
+      updateClock(); 
+      closeSettings();
+    }
+
+    function addEditingItem() {
+      const subjectInput = document.getElementById('new-subject');
+      const startInput = document.getElementById('new-start');
+      const endInput = document.getElementById('new-end');
+
+      const subject = subjectInput.value.trim();
+      const startTime = startInput.value;
+      const endTime = endInput.value;
+
+      if (subject && startTime && endTime) {
+        if(startTime >= endTime) {
+          alert('終了時間は開始時間より後である必要があります。(結束時間必須晚於開始時間)');
+          return;
+        }
+
+        editingSchedule.push({
+          id: Date.now().toString(),
+          subject,
+          startTime,
+          endTime
+        });
+
+        editingSchedule.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        renderEditingSchedule();
+        
+        subjectInput.value = '';
+        startInput.value = '';
+        endInput.value = '';
+      } else {
+        alert('情報を完全に入力してください。(請填寫完整資訊)');
+      }
+    }
+
+    function removeEditingItem(id) {
+      editingSchedule = editingSchedule.filter(item => item.id !== id);
+      renderEditingSchedule();
+    }
+
+    // --- 初始化 ---
+    function init() {
+      renderSchedule(); 
+      updateClock();    
+      setInterval(updateClock, 1000);
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+
+  </script>
+</body>
+</html>
