@@ -93,7 +93,7 @@
       <!-- Modal 標頭 -->
       <div class="bg-[#495B3F] p-6 flex justify-between items-center text-[#F5F3EC] shrink-0 border-b-2 border-[#C49750]">
         <h3 class="text-xl font-serif-tc font-bold flex items-center gap-3 tracking-widest">
-          <i class="ph ph-faders text-2xl"></i> 考程設定
+          <i class="ph ph-faders text-2xl"></i> 考試時間設定
         </h3>
         <button 
           onclick="closeSettings()"
@@ -163,7 +163,7 @@
           onclick="saveSettings()"
           class="px-8 py-2.5 font-bold bg-[#1A2B4C] text-[#F5F3EC] hover:bg-[#111C33] transition-colors tracking-widest"
         >
-          確定
+          保存設定
         </button>
       </div>
 
@@ -228,9 +228,9 @@
               ${isActive ? `<span class="bg-[#9D2933] text-white text-xs font-bold px-3 py-1 tracking-[0.2em] shadow-sm flex items-center gap-1 animate-pulse"><i class="ph-fill ph-circle text-[8px]"></i> 進行中</span>` : ''}
             </div>
             
-            <div class="text-lg flex items-center gap-3 font-medium ml-2 ${isActive ? 'text-slate-800' : 'text-slate-500'}">
-              <i class="ph ${isActive ? 'ph-hourglass-high text-[#9D2933]' : 'ph-clock'} text-xl"></i>
-              <span class="tracking-widest font-mono text-base pt-0.5">${exam.startTime} <span class="mx-1 font-sans text-slate-300">|</span> ${exam.endTime}</span>
+            <div class="flex items-center gap-4 font-medium ml-2 mt-2 ${isActive ? 'text-slate-800' : 'text-slate-500'}">
+              <i class="ph ${isActive ? 'ph-hourglass-high text-[#9D2933]' : 'ph-clock'} text-3xl md:text-4xl"></i>
+              <span class="tracking-[0.1em] font-mono text-3xl md:text-4xl">${exam.startTime} <span class="mx-3 font-sans text-slate-300 font-light">|</span> ${exam.endTime}</span>
             </div>
           </div>
         `;
