@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>考試時程表 - 日式風格</title>
+  <title>考試時程表</title>
   
   <!-- 引入 Google Fonts: 思源宋體 (Serif) 與 思源黑體 (Sans) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,7 +53,7 @@
       <!-- 左側標頭 (抹茶色) -->
       <div class="bg-[#495B3F] text-[#F5F3EC] p-8 shadow-sm flex flex-col items-center justify-center gap-3 shrink-0 border-b-4 border-[#C49750]">
         <i class="ph ph-scroll text-4xl opacity-80"></i>
-        <h2 class="text-3xl font-serif-tc font-bold tracking-[0.2em] ml-2">本日考程</h2>
+        <h2 class="text-3xl font-serif-tc font-bold tracking-[0.2em] ml-2">考試科目</h2>
       </div>
       
       <!-- 時程清單容器 -->
@@ -134,10 +134,11 @@
             />
           </div>
           <button 
+            id="btn-submit-item"
             onclick="addEditingItem()"
             class="bg-[#495B3F] hover:bg-[#3A4932] text-[#F5F3EC] p-3 flex items-center gap-2 font-bold transition-colors w-full md:w-auto justify-center tracking-widest"
           >
-            <i class="ph ph-plus text-lg"></i> 新增
+            <i id="submit-icon" class="ph ph-plus text-lg"></i> <span id="submit-text">新增</span>
           </button>
         </div>
 
@@ -179,6 +180,7 @@
     
     let editingSchedule = [];
     let activeExamId = null;
+    let currentEditId = null; // 用來追蹤目前正在修改的項目 ID
 
     // --- 工具函式 ---
     const formatTime = (date) => {
@@ -252,13 +254,22 @@
               ${item.startTime} - ${item.endTime}
             </span>
           </div>
-          <button 
-            onclick="removeEditingItem('${item.id}')"
-            class="text-slate-400 hover:text-[#9D2933] p-2 transition-colors shrink-0"
-            title="削除"
-          >
-            <i class="ph ph-trash text-xl"></i>
-          </button>
+          <div class="flex items-center gap-1 shrink-0">
+            <button 
+              onclick="editEditingItem('${item.id}')"
+              class="text-slate-400 hover:text-[#C49750] p-2 transition-colors"
+              title="修改"
+            >
+              <i class="ph ph-pencil-simple text-xl"></i>
+            </button>
+            <button 
+              onclick="removeEditingItem('${item.id}')"
+              class="text-slate-400 hover:text-[#9D2933] p-2 transition-colors"
+              title="削除"
+            >
+              <i class="ph ph-trash text-xl"></i>
+            </button>
+          </div>
         </div>
       `).join('');
     }
@@ -301,9 +312,20 @@
       modal.classList.add('hidden');
       modal.classList.remove('flex');
       
+      resetInputFields();
+    }
+
+    // 重設輸入框與按鈕狀態
+    function resetInputFields() {
       document.getElementById('new-subject').value = '';
       document.getElementById('new-start').value = '';
       document.getElementById('new-end').value = '';
+      
+      currentEditId = null;
+      document.getElementById('submit-text').textContent = '新增';
+      document.getElementById('submit-icon').className = 'ph ph-plus text-lg';
+      document.getElementById('btn-submit-item').classList.replace('bg-[#C49750]', 'bg-[#495B3F]');
+      document.getElementById('btn-submit-item').classList.replace('hover:bg-[#A67E40]', 'hover:bg-[#3A4932]');
     }
 
     function saveSettings() {
@@ -329,26 +351,59 @@
           return;
         }
 
-        editingSchedule.push({
-          id: Date.now().toString(),
-          subject,
-          startTime,
-          endTime
-        });
+        if (currentEditId) {
+          // 修改現有項目
+          const index = editingSchedule.findIndex(item => item.id === currentEditId);
+          if (index !== -1) {
+            editingSchedule[index] = { ...editingSchedule[index], subject, startTime, endTime };
+          }
+        } else {
+          // 新增項目
+          editingSchedule.push({
+            id: Date.now().toString(),
+            subject,
+            startTime,
+            endTime
+          });
+        }
 
         editingSchedule.sort((a, b) => a.startTime.localeCompare(b.startTime));
         renderEditingSchedule();
         
-        subjectInput.value = '';
-        startInput.value = '';
-        endInput.value = '';
+        resetInputFields(); // 儲存後重設輸入框與按鈕狀態
       } else {
         alert('情報を完全に入力してください。(請填寫完整資訊)');
       }
     }
 
+    // 載入要修改的項目到輸入框中
+    function editEditingItem(id) {
+      const item = editingSchedule.find(i => i.id === id);
+      if (item) {
+        document.getElementById('new-subject').value = item.subject;
+        document.getElementById('new-start').value = item.startTime;
+        document.getElementById('new-end').value = item.endTime;
+        
+        currentEditId = id;
+        
+        // 變更按鈕樣式提示目前為「修改」狀態
+        document.getElementById('submit-text').textContent = '更新';
+        document.getElementById('submit-icon').className = 'ph ph-check text-lg';
+        
+        const btn = document.getElementById('btn-submit-item');
+        btn.classList.replace('bg-[#495B3F]', 'bg-[#C49750]');
+        btn.classList.replace('hover:bg-[#3A4932]', 'hover:bg-[#A67E40]');
+      }
+    }
+
     function removeEditingItem(id) {
       editingSchedule = editingSchedule.filter(item => item.id !== id);
+      
+      // 如果正在修改的項目被刪除了，重置輸入框狀態
+      if (currentEditId === id) {
+        resetInputFields();
+      }
+      
       renderEditingSchedule();
     }
 
