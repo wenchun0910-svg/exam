@@ -172,11 +172,22 @@
 
   <script>
     // --- 應用程式狀態 ---
-    let schedule = [
+    const defaultSchedule = [
       { id: '1', subject: '國文', startTime: '08:10', endTime: '09:30' },
       { id: '2', subject: '英文', startTime: '09:50', endTime: '11:10' },
       { id: '3', subject: '數學', startTime: '11:30', endTime: '12:50' },
     ];
+    
+    let schedule = [];
+    
+    // 從瀏覽器本地儲存讀取資料，若無則使用預設值
+    try {
+      const savedSchedule = localStorage.getItem('examSchedule');
+      schedule = savedSchedule ? JSON.parse(savedSchedule) : defaultSchedule;
+    } catch (e) {
+      console.error('無法讀取本地儲存的時程表', e);
+      schedule = defaultSchedule;
+    }
     
     let editingSchedule = [];
     let activeExamId = null;
@@ -336,7 +347,15 @@
     function saveSettings() {
       schedule = [...editingSchedule];
       activeExamId = null; 
-      renderSchedule(); // 【已修正】強制重新渲染左側考程表，確保設定馬上生效
+      
+      // 將設定儲存至瀏覽器本地儲存
+      try {
+        localStorage.setItem('examSchedule', JSON.stringify(schedule));
+      } catch (e) {
+        console.error('無法儲存時程表至瀏覽器', e);
+      }
+      
+      renderSchedule(); // 強制重新渲染左側考程表，確保設定馬上生效
       updateClock(); 
       closeSettings();
     }
